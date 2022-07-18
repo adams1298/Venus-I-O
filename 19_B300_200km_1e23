@@ -1,0 +1,349 @@
+&switches
+   verbose=.false.
+   try_continue=.true.
+   compressible=.false.
+   dens_strat=.false.
+   tracers=.true.
+   composition=.false.
+   phase_changes=.false.
+   melting=.false.
+   multig_solve=.true.
+   total_pressure=.true.
+   dimensional_units=.true.
+   !strict_eta_air=.true. ! now located in defaults_include.f90
+&end
+
+&geometry	
+   shape='spherical'
+   theta_position  = 'equator_start'
+   
+   D_dimensional=3054.e3 !3094.e3 !1520.e3       ! depth
+   D_dim_top=0.
+   nxtot=1 !024 !256
+   nytot=2048
+   nztot=512 !128
+   aspect_ratio(1)=1.0
+   aspect_ratio(2)=3.1416 !6.2832
+
+   r_cmb=3150.e3  !r_cmb=1.2  
+   zspacing_mode='function_exp'
+   dresl_topbot=1.0
+   dresl_surf=1.0
+   wresl_surf=0.1
+   dresl_cmb=1.0
+   wresl_cmb=0.05
+   dresl_400=1.0
+   wresl_400=0.1
+   dresl_air=5.0
+   wresl_air=0.1
+&end	
+
+&refstate
+   perplex_properties=.false.
+
+   Ra0=1.1639e7 ! should be ignored if dimensional
+   drho_thermal=0.075
+   drho_surf=3300   !1.0
+   drho_cmb=5280  !1.6
+
+   Rh=4.9185e-12  !20.0
+
+   Tref_surf=1600.   !1650.   ! in K
+   
+   air_density=1.e-3  ! prob needs to be converted to dimensional
+   tcond_dimensional=3.0
+   deltaT_dimensional=2500.0
+   g_dimensional     = 8.9 !9.81
+   dens_dimensional=3300.   ! used in thermal conductivity, viscosity p calc
+   Cp_dimensional=1200.     ! specific heat capacity W/kg/K
+   expan_dimensional=3.e-5  ! expansivity in K^-1
+&end	
+
+
+&boundaries
+   x_bc='nn'
+   y_bc='nn'
+
+   topT_mode='iso'
+   topT_val=700.
+   topV_mode='free-slip'
+
+   air_layer=.true.  
+   air_thickness=152.e3  !0.05  
+   air_threshold=0.9 
+
+   zero_surface_mean_flow=.false.
+
+   botT_mode='flux'   	
+   botT_val=0.0
+   botV_mode='free-slip'
+&end
+
+&t_init
+   imode_t='fdipSgapS'
+   amp_t=0.0 !25.0 !25.0   ! in K
+   blthick=1.2  !152.e3  !30.e3	! in km
+   t0_init=1700.  !1600 + 300   !1917.	! initial potential temperature in K
+   blthick_l=1.2  !152.e3  !30.e3      ! in km
+   blthick_r=1.2
+   gap_length = 250.e3         !(andi) set interface gap spacing (km)
+   sidewall_gap = 200.e3       !(andi) set sidewall gap spacing (km)
+
+   !Robert T profile: (see 'Fabio vs. Robert TBL' figure 2 for preliminary age-thickness scaling)
+   plate_age_left = 300.0 !Ma
+   plate_age_right = 300.0 !Ma
+
+   !Fabio T profile: (see 'StagYY Lithospheric Thickness' file for blthick-thickness scaling)
+   !blthick_l=0.41 !0.41~=50km !left plate
+   !blthick_r=0.65 !0.65~=80km !right plate + slab perturbation
+   !blthick = 0.65
+&end
+
+&timein
+   nsteps=5000000 !50000
+   !dt_write=2.0e6
+   !finish_at_time=1.0e7
+   nwrite=50 !00 !50
+   iord=2
+   alpha_adv=0.4
+   alpha_diff=0.6
+   advection_scheme='MPDATA'
+&end
+
+&viscosity
+   ietalaw=1
+   phase_dep_Eeta=.false.
+   eta_melt=.false.
+   deta_melt=0.1
+   PressureDepRheology=.false. 
+
+   deta_p(1,:)=100. 		   !phase1  700 and from there on
+   !deta_p(2,:)=0.1 		   !phase2  500-700
+
+   eta0=1e20  !2.0e20	! in Pa s
+   T0_eta=1600. !1650.  ! 0.64  
+   d0_eta=0.0   
+   Ts_eta=700.  ! 0.12 
+
+   eta_max=1e+23  !1.e24  ! 1.e5
+   eta_min=1e+19  !1.e18  ! 1.e-4
+
+   diffusion_creep=.true.
+   E_eta(1,:,:)=240080.379  ! 11.55  ! diffusion creep wet olivine (J/mol)  ! PV
+   V_eta(1,:,:)=10.0e-7 !8.4485e-7  !4.0  ! in m3/mol
+
+   dislocation_creep=.false.
+   E_eta(2,:,:)=430273.926  !20.7    ! dislocation creep wet olivine
+   V_eta(2,:,:)=1.0e-6   !10.0    !
+   n_eta=3.        
+   stress0_eta(:,:)=20.e6  !6.342e3  !1.0e6  ! stress diffusion=dislocation ! in Pa
+
+   plasticity=.true.
+   stressY_eta=500.e6 ! this is turned off for either dim or non-dim; 1.577e4 constant ('ductile') yield stress @p=0  
+   dstressY_eta_dp=0.         !  no increase with depth ! gradient of the ductile yield stress
+   cohesion_eta=1.e7 !1577.0      ! 0-pressure strength for brittle failure
+   frictionCoeff_eta=0.25  ! Byerlee's friction coefficient for brittle def.
+
+   c_dependent_yieldpars=.true.
+
+   eta_air=1e+18  !1.e-3     ! viscosity of sticky air 
+
+   ! THIS IS THE WEAK CRUST
+   etalaw_basalt = 1
+   deta_basalt = 1.
+   c0eta_basalt = 0.0
+   cohesion_basalt = 1.e7 !1577.
+   frictionCoeff_basalt = 0.001
+   stressY_basalt = 1.0e14
+   dstressY_basalt = 0.0e10
+
+   ! THIS IS THE WEAK FAULT
+   weak_dx = 779.e13  !900 km long slab
+   weak_dz = 450.0e13 
+   slabLength = 0 !550.0e3
+
+   ! THIS IS THE OCEANIC PLATEAU
+   etalaw_primordial = 1
+   deta_primordial = 1.e0  !7.7361e24   ! 1.e2
+   c0eta_primordial = 0.0
+   cohesion_primordial = 1.e7  
+   frictionCoeff_primordial = 0.10
+   stressY_primordial  = 1.0e14  
+   dstressY_primordial = 0.0e10 
+
+   alpha_eta=0.5      ! viscosity iteration parameters
+   eta_conv=1.e-3  !1.e-3
+   maxits_eta=25
+&end
+
+&iteration
+   minits=1
+   maxits=25
+   normalize_res_by_eta=.true.
+   errmax=8.e-3
+
+   relax_kernel='classic'
+   alpha_mom=0.7
+   alpha_cont=0.8
+   redblack=.false.
+&end
+
+&multi 
+   nrelax1=25
+   nrelax2=25
+   maxcoarseits=200
+   alpha_multi=0.6
+   nhmin=8
+   nzmin=2
+   nzpnmin=1
+
+   more_coarse_its=.true.
+   f_cycle=.true.
+   matrix_dep_pinterp=.true.
+&end
+
+&ioin
+  !output_file_stem='+op/e1/e1'
+  !output_file_stem='+op/allweak/allweak' 
+  output_file_stem='/expanse/lustre/projects/csd491/aadams/final/B300/PT_l200_e23_r50/'
+  !input_file='+op/e1/e1'
+   input_frame=00158
+   t_write=.true.     ! temperature
+   c_write=.true.     ! composition
+   vp_write=.true.    ! velocity & pressure
+   eta_write=.true.   ! viscosity
+   edot_write=.true.  ! strain rate
+   stress_write=.true. ! stress
+   rho_write=.true.   ! density
+   age_write=.false.   ! age (since last melted)
+   topo_write=.true.  ! topography (CMB & surface)
+   crust_write=.false. ! crustal thickness
+   g_write=.false.     ! geoid and topography corrected for self-gravitation
+   tra_write=.true.   ! tracers
+   zero_old_trafiles=.true.
+   primordial_write=.true.
+   nstress_write=.true.
+   defm_write=.true.
+&end
+
+&compin
+&end
+
+&melt
+ !  solidus_function='linear'
+ !  Tsol0=1300.     ! adjust this to get different-sized weak regions
+ !  dTsol_dz=0.0017 !2.0 !K/m if dimensional
+!!        solidus_function='simple'
+!!        !latent_heat=600e3               ! in J/kg
+!!       c_dependent_solidus=.true.   ! increases solidus due to depletion
+!!        deltaTsol_depletion_dimensional=150.  ! in K
+!!        d_erupt_Earth=588.e3              ! in meters
+!!        eruption=.true.
+!!        erupt_mode='immediate'
+
+&end
+
+
+&phase
+!!   effective_cp_alpha = .true.
+!!   nphase_systems=2	!phase
+   nphase_systems=1
+ 
+   sys_ol       =1       ! phase system meanings (also apply to viscosity parameters)
+   sys_pxgt     =2
+   sys_melt_ol  =3
+   sys_melt_pxgt=4
+   sys_prim     =5
+   sys_ccrust   =6
+   sys_metal    =7
+
+   ! nphase(:) = 0,1
+    nphase(:) = 1 !# of phase changes per system 
+!   nphase(:)     = 6,0,0,0,0,0,0
+
+  phase_mode(:,1) = 'discont' !'discont   ','discont   ','discont   '
+
+   dp0(:,1) = 200.e3  !850.e3,650.e3    !+150 km for the sticky air thickness
+!   Tp0(:,1) = 0 !800 !1600.,1900.
+
+   drho_p(:,1)=200. !0.,0.,0.!   
+   clap(:,1)=0. !0.,0.,0.
+   w_p(:,1)=0.! 0.,0.,0.
+
+!!        Tp0(:,1)=1900., 1600.                   ! in K
+!!        Tp0(:,2)=1900., 1600., 0.
+!!        phase_mode(:,1)='discont   ','discont   '
+!!        phase_mode(:,2)='eff_alpha ','eff_alpha ','discont   '
+!!        dp0(:,1)=730.e3, 453.e3                 ! in km
+!!        dp0(:,2)=796.e3, 442.e3, 66.e3
+!!        drho_p(:,1)=400., 180.                  ! in kg/m3
+!!        drho_p(:,2)=400., 150., 350.
+!!        clap(:,1)=-2.5e6, 2.5e6                 ! in Pa/K
+!!        clap(:,2)= 1.0e6, 1.0e6, 0.0
+!!        w_p(:,1)=25.e3, 25.e3                   ! in m xxxx
+!!        w_p(:,2)=75.e3, 75.e3, 25.e3
+
+!!        Ol_frac_ref      = 0.6
+!!        basalt_frac_ref  = 0.2
+&end
+
+&continents
+&end
+
+&tracersin
+   imode_tra='even+ran+air'  !'even+ran+air'
+   ntracers=13694800 !500000000 !3492174000 !13694800
+   tracers_everywhere=.true. 
+   basalt_harzburgite=.true.
+   tracers_weakcrust=.true.
+   tracers_weakfault=.true.
+   dip_angle=60.0
+   dip_angle2=30.0
+   d_crust=30.e3 !15.2e3  !vary between 15.2 and 30.4 *** 0.005
+
+   crustalbuoyancy = .true.
+   B_crust = -300
+   weakcrust_maxdepth = 228.e3 !66 km depth + air_thickness  !200.0e3 !0.4
+   crust_min_depth = 167.e3 !5km + 152km sticky air
+   
+   eclogite =.true.
+   B_eclogite = 120 !0
+
+   garnet_trap = .true.
+   B_gt        = -130 !between 730 and 796 km depth -- double check value! ArmannTackley2012
+   trapdepth_A = 862.e3 !710 km + 152 sticky air
+   trapdepth_B = 922.e3 !770 km + 152 sticky air
+
+   dynamic_710km = .true. 
+   cslope_710km = -1e6 !Pa/K   
+   B_dyn710    = -400
+
+   primordial_layer=.false.
+   d_primordial=200.e3 !0.2  !width
+   B_primordial=-25. !0.15
+   imode_primordial='plateau'
+&end
+
+
+&plot
+!   npix=250000
+!   plot_file_stem='+im/e1/e1'
+!   dots=.false.
+!   auto_t_scale=.true.
+!   t_superadiabatic=.true.
+!   z_xyslice=0.5 ! ????
+!   t_plot=.true.
+!   c_plot=.true.
+!   f_plot=.true.
+!   v_plot=.false.
+!   eta_plot=.true.
+!   air_plot=.true.
+!   pd_plot=.true.
+!   rho_plot=.true.
+!   stress_plot=.true.
+!   edot_plot=.true.
+!   strain_plot=.true.
+!   tra_plot=.false.
+!   defm_plot=.true.
+&end
+
